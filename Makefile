@@ -5,6 +5,7 @@
 SHELL = /bin/bash
 CURL = curl -L
 BL33_UEFI = 0
+PLAT_UART_BASE = 0xC00A3000
 
 ifeq ($(V),1)
   Q :=
@@ -19,20 +20,20 @@ _all:
 	$(Q)set -e ; cd .. ;
 	$(Q)if [ ! -L linux ] ; then ln -s linux-artik7 linux ; fi
 	$(Q)$(MAKE) -f optee_build/Makefile all $(filter-out _all,$(MAKECMDGOALS))
-#	$(Q)if [ ! -L u-boot ] ; then ln -s ../u-boot u-boot ; fi
+	$(Q)if [ ! -L u-boot ] ; then ln -s ../u-boot u-boot ; fi
 
 all: build-lloader build-fip build-linux build-optee-rfs build-singleimage
 
 pre_clean:
 	$(Q)if [ ! -L linux ] ; then ln -s ../kernel linux ; fi
-	#$(Q)if [ ! -L u-boot ] ; then ln -s ../u-boot u-boot ; fi
+	$(Q)if [ ! -L u-boot ] ; then ln -s ../u-boot u-boot ; fi
 
 post_clean:
 	$(Q)if [ -L linux ] ; then rm linux ; fi
-	#$(Q)if [ -L u-boot ] ; then rm u-boot ; fi
+	$(Q)if [ -L u-boot ] ; then rm u-boot ; fi
 	$(Q)if [ -L buildroot ] ; then rm buildroot ; fi
 
-clean: clean-bl1-bl2-bl31-fip clean-bl33 clean-lloader
+clean: clean-bl1-bl2-bl31-fip clean-bl32 clean-bl33 clean-lloader
 clean: clean-linux-dtb clean-optee-rfs clean-optee-linuxdriver
 clean: clean-optee-client clean-bl32 clean-aes-perf clean-helloworld
 clean: clean-singleimage
@@ -42,7 +43,7 @@ cleaner: pre_clean clean post_clean
 distclean: cleaner
 
 help:
-	@echo "Makefile for S5P6818-drone board u-boot firmware/kernel"
+	@echo "Makefile for artik710_raptor board u-boot firmware/kernel"
 	@echo
 	@echo "- Run 'make' to build the following images:"
 	@echo "  LLOADER = $(LLOADER) with:"
@@ -103,16 +104,16 @@ CROSS_COMPILE32 ?= $(CCACHE)arm-linux-gnueabihf-
 # U-BOOT
 #
 
-#BL33 = u-boot/u-boot.bin
-BL33 = optee_build/u-boot.bin
+BL33 = u-boot/u-boot.bin
+
 
 .PHONY: build-bl33
 build-bl33:: $(aarch64-linux-gnu-gcc)
 build-bl33 $(BL33)::
-#	$(ECHO) '  BUILD   $@'
-#	$(Q)set -e ; cd u-boot ; \
-#	    $(MAKE) s5p6818_arm64_drone_config ; \
-#	    $(MAKE) CROSS_COMPILE="$(CROSS_COMPILE)"
+	$(ECHO) '  BUILD   $@'
+	$(Q)set -e ; cd u-boot ; \
+	    $(MAKE) artik710_raptor_config ; \
+	    $(MAKE) CROSS_COMPILE="$(CROSS_COMPILE)"
 	$(Q)touch ${BL33}
 
 clean-bl33:
@@ -144,6 +145,9 @@ ifneq (,$(BL32))
 ARMTF_FLAGS += SPD=opteed
 ARMTF_EXPORTS += BL32=$(PWD)/$(BL32)
 endif
+ifneq (,$(PLAT_UART_BASE))
+ARMTF_FLAGS += PLAT_UART_BASE="$(PLAT_UART_BASE)"
+endif
 
 define arm-tf-make
         $(ECHO) '  BUILD   build-$(strip $(1)) [$@]'
@@ -173,9 +177,9 @@ endif
 ifneq ($(filter all build-bl32,$(MAKECMDGOALS)),)
 tf-deps += build-bl32
 endif
-#ifneq ($(filter all build-bl33,$(MAKECMDGOALS)),)
-#tf-deps += build-bl33
-#endif
+ifneq ($(filter all build-bl33,$(MAKECMDGOALS)),)
+tf-deps += build-bl33
+endif
 
 .PHONY: build-fip
 build-fip:: $(tf-deps)
@@ -225,8 +229,7 @@ clean-lloader:
 # each time it is run
 
 LINUX = linux/arch/arm64/boot/Image
-#DTB = nexell/s5p6818-drone-optee.dtb
-DTB = nexell/s5p6818-drone.dtb
+DTB = nexell/s5p6818-artik710-raptor.dtb
 DTB2 = linux/arch/arm64/boot/dts/$(DTB)
 # Config fragments to merge with the default kernel configuration
 KCONFIGS += linux/arch/arm64/configs/s5p6818_drone_defconfig
@@ -240,7 +243,7 @@ build-linux:: $(linux-build-deps) $(aarch64-linux-gnu-gcc)
 build-linux $(LINUX):: linux/.config
 	$(ECHO) '  BUILD   build-linux'
 	$(Q)optee_build/modify_linux_config.sh
-	$(Q)flock .linuxbuildinprogress $(MAKE) -C linux ARCH=arm64 LOCALVERSION= -j9 Image
+	$(Q)flock .linuxbuildinprogress $(MAKE) -C linux ARCH=arm64 LOCALVERSION= Image
 
 build-dtb:: $(aarch64-linux-gnu-gcc)
 build-dtb $(DTB):: linux/.config
@@ -372,6 +375,9 @@ optee-os-flags += DEBUG=0
 optee-os-flags += CFG_TEE_CORE_LOG_LEVEL=2 # 0=none 1=err 2=info 3=debug 4=flow
 #optee-os-flags += CFG_WITH_PAGER=y
 #optee-os-flags += CFG_TEE_TA_LOG_LEVEL=3
+ifneq (,$(PLAT_UART_BASE))
+optee-os-flags += PLAT_UART_BASE="$(PLAT_UART_BASE)"
+endif
 
 # 64-bit TEE Core
 # FIXME: Compiler bug? xtest 4002 hangs (endless loop) when:
