@@ -33,8 +33,10 @@ post_clean:
 	$(Q)if [ -L u-boot ] ; then rm u-boot ; fi
 	$(Q)if [ -L buildroot ] ; then rm buildroot ; fi
 
-clean: clean-bl1-bl2-bl31-fip clean-bl32 clean-bl33 clean-lloader
-clean: clean-linux-dtb clean-optee-rfs clean-optee-linuxdriver
+#clean: clean-bl1-bl2-bl31-fip clean-bl32 clean-bl33 clean-lloader
+clean: clean-bl1-bl2-bl31-fip clean-bl32 clean-lloader
+#clean: clean-linux-dtb clean-optee-rfs clean-optee-linuxdriver
+clean: clean-optee-rfs
 clean: clean-optee-client clean-bl32 clean-aes-perf clean-helloworld
 clean: clean-singleimage
 
@@ -104,7 +106,7 @@ CROSS_COMPILE32 ?= $(CCACHE)arm-linux-gnueabihf-
 # U-BOOT
 #
 
-BL33 = u-boot/u-boot.bin
+BL33 = u-boot-artik7/u-boot.bin
 
 
 .PHONY: build-bl33
@@ -118,7 +120,7 @@ build-bl33 $(BL33)::
 
 clean-bl33:
 	$(ECHO) '  CLEAN   $@'
-	$(Q) $(MAKE) -C u-boot clean
+	$(Q) $(MAKE) -C u-boot-artik7 clean
 
 #
 # ARM Trusted Firmware
@@ -261,8 +263,8 @@ linux/usr/gen_init_cpio: linux/.config
 
 clean-linux-dtb:
 	$(ECHO) '  CLEAN   $@'
-	$(Q)$(MAKE) -C linux ARCH=arm64 clean
-	$(Q)rm -f linux/.config
+	$(Q)$(MAKE) -C linux-artik7 ARCH=arm64 clean
+	$(Q)rm -f linux-artik7/.config
 	$(Q)rm -f .linuxbuildinprogress
 
 #
@@ -339,7 +341,7 @@ endif
 build-optee-linuxdriver:: $(optee-linuxdriver-deps)
 build-optee-linuxdriver $(optee-linuxdriver-files):: $(aarch64-linux-gnu-gcc)
 	$(ECHO) '  BUILD   build-optee-linuxdriver'
-	$(Q)$(MAKE) -C linux \
+	$(Q)$(MAKE) -C linux-artik7 \
 	   ARCH=arm64 \
 	   LOCALVERSION= \
 	   M=$(PWD)/optee_linuxdriver \
@@ -347,7 +349,7 @@ build-optee-linuxdriver $(optee-linuxdriver-files):: $(aarch64-linux-gnu-gcc)
 
 clean-optee-linuxdriver:
 	$(ECHO) '  CLEAN   $@'
-	$(Q)$(MAKE) -C linux \
+	$(Q)$(MAKE) -C linux-artik7 \
 	   ARCH=arm64 \
 	   LOCALVERSION= \
 	   M=$(PWD)/optee_linuxdriver \
