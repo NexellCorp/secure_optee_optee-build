@@ -5,7 +5,7 @@
 SHELL = /bin/bash
 CURL = curl -L
 BL33_UEFI = 0
-PLAT_UART_BASE = 0xC00A3000
+PLAT_UART_BASE ?= 0xC00A3000
 
 ifeq ($(V),1)
   Q :=
