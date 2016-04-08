@@ -9,7 +9,7 @@ RESULT=${BUILD_DIR}/result
 
 MERGE_TYPE=fixed
 
-BASE_ADDR=0xbfe00000
+BASE_ADDR=0x7fe00000
 LOAD_ADDR=0x40000000
 
 LLOADER_FILE=${TOP}/l-loader/l-loader.bin

@@ -6,6 +6,7 @@ SHELL = /bin/bash
 CURL = curl -L
 BL33_UEFI = 0
 PLAT_UART_BASE ?= 0xC00A3000
+PLAT_DRAM_SIZE ?= 1024
 
 ifeq ($(V),1)
   Q :=
@@ -150,6 +151,9 @@ endif
 ifneq (,$(PLAT_UART_BASE))
 ARMTF_FLAGS += PLAT_UART_BASE="$(PLAT_UART_BASE)"
 endif
+ifneq (,$(PLAT_DRAM_SIZE))
+ARMTF_FLAGS += PLAT_DRAM_SIZE="$(PLAT_DRAM_SIZE)"
+endif
 
 define arm-tf-make
         $(ECHO) '  BUILD   build-$(strip $(1)) [$@]'
@@ -217,7 +221,8 @@ endif
 build-lloader:: $(lloader-deps) $(arm-linux-gnueabihf-gcc)
 build-lloader $(LLOADER)::
 	$(ECHO) '  BUILD   build-lloader'
-	$(Q)$(MAKE) -C l-loader BL1=$(PWD)/$(BL1) CROSS_COMPILE="$(CROSS_COMPILE32)" l-loader.bin
+	$(Q)$(MAKE) -C l-loader BL1=$(PWD)/$(BL1) PLAT_DRAM_SIZE=$(PLAT_DRAM_SIZE) \
+		CROSS_COMPILE="$(CROSS_COMPILE32)" l-loader.bin
 
 clean-lloader:
 	$(ECHO) '  CLEAN   $@'
@@ -313,12 +318,23 @@ endif
 ifneq ($(filter all build-fip,$(MAKECMDGOALS)),)
 singleimage-deps += build-lloader
 endif
+ifneq (,$(PLAT_DRAM_SIZE))
+ifeq (${PLAT_DRAM_SIZE},2048)
+DRAM_BASE=0xbfe00000
+else ifeq (${PLAT_DRAM_SIZE},512)
+DRAM_BASE=0x5fe00000
+else
+DRAM_BASE=0x7fe00000
+endif
+
+SINGLE_PARAM="-b $(DRAM_BASE)"
+endif
 
 .PHONY: build-singleimage
 build-singleimage:: $(singleimage-deps)
 build-singleimage:: optee_build/gen_singleimage.sh
 	$(ECHO) "  GEN    $(SINGLE_IMG)"
-	$(Q)optee_build/gen_singleimage.sh
+	$(Q)optee_build/gen_singleimage.sh $(SINGLE_PARAM)
 
 clean-singleimage:
 	$(ECHO) "  CLEAN  $@"
@@ -379,6 +395,9 @@ optee-os-flags += CFG_TEE_CORE_LOG_LEVEL=2 # 0=none 1=err 2=info 3=debug 4=flow
 #optee-os-flags += CFG_TEE_TA_LOG_LEVEL=3
 ifneq (,$(PLAT_UART_BASE))
 optee-os-flags += PLAT_UART_BASE="$(PLAT_UART_BASE)"
+endif
+ifneq (,$(PLAT_DRAM_SIZE))
+optee-os-flags += PLAT_DRAM_SIZE="$(PLAT_DRAM_SIZE)"
 endif
 
 # 64-bit TEE Core
