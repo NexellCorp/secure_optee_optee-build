@@ -7,6 +7,7 @@ CURL = curl -L
 BL33_UEFI = 0
 PLAT_UART_BASE ?= 0xC00A3000
 PLAT_DRAM_SIZE ?= 1024
+BL31_ON_SRAM = 1
 
 ifeq ($(V),1)
   Q :=
@@ -23,7 +24,8 @@ _all:
 	$(Q)$(MAKE) -f optee_build/Makefile all $(filter-out _all,$(MAKECMDGOALS))
 	$(Q)if [ ! -L u-boot ] ; then ln -s ../u-boot u-boot ; fi
 
-all: build-lloader build-fip build-linux build-optee-rfs build-singleimage
+all: build-lloader build-fip build-linux build-optee-rfs build-singleimage \
+	build-fip-loader build-fip-secure build-fip-nonsecure
 
 pre_clean:
 	$(Q)if [ ! -L linux ] ; then ln -s ../kernel linux ; fi
@@ -35,7 +37,9 @@ post_clean:
 	$(Q)if [ -L buildroot ] ; then rm buildroot ; fi
 
 #clean: clean-bl1-bl2-bl31-fip clean-bl32 clean-bl33 clean-lloader
+
 clean: clean-bl1-bl2-bl31-fip clean-bl32 clean-lloader
+
 #clean: clean-linux-dtb clean-optee-rfs clean-optee-linuxdriver
 clean: clean-optee-rfs
 clean: clean-optee-client clean-bl32 clean-aes-perf clean-helloworld
@@ -114,7 +118,7 @@ BL33 = u-boot-artik7/u-boot.bin
 build-bl33:: $(aarch64-linux-gnu-gcc)
 build-bl33 $(BL33)::
 	$(ECHO) '  BUILD   $@'
-	$(Q)set -e ; cd u-boot ; \
+	$(Q)set -e ; cd u-boot-artik7 ; \
 	    $(MAKE) artik710_raptor_config ; \
 	    $(MAKE) CROSS_COMPILE="$(CROSS_COMPILE)"
 	$(Q)touch ${BL33}
@@ -140,9 +144,12 @@ BL31 = $(ATF)/bl31.bin
 # Comment out to not include OP-TEE OS image in fip.bin
 BL32 = optee_os/out/arm-plat-s5p6818/core/tee.bin
 FIP = $(ATF)/fip.bin
+FIPloader = $(ATF)/fip-loader.bin
+FIPsecure = $(ATF)/fip-secure.bin
+FIPnonsecure = $(ATF)/fip-nonsecure.bin
 
 ARMTF_FLAGS := PLAT=s5p6818 DEBUG=$(ATF_DEBUG)
-#ARMTF_FLAGS += LOG_LEVEL=40
+ARMTF_FLAGS += LOG_LEVEL=30
 ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(PWD)/$(BL33) #CFLAGS=""
 ifneq (,$(BL32))
 ARMTF_FLAGS += SPD=opteed
@@ -153,6 +160,9 @@ ARMTF_FLAGS += PLAT_UART_BASE="$(PLAT_UART_BASE)"
 endif
 ifneq (,$(PLAT_DRAM_SIZE))
 ARMTF_FLAGS += PLAT_DRAM_SIZE="$(PLAT_DRAM_SIZE)"
+endif
+ifneq (,$(BL31_ON_SRAM))
+ARMTF_FLAGS += BL31_ON_SRAM="$(BL31_ON_SRAM)"
 endif
 
 define arm-tf-make
@@ -187,10 +197,29 @@ ifneq ($(filter all build-bl33,$(MAKECMDGOALS)),)
 tf-deps += build-bl33
 endif
 
+tf-deps-loader += build-bl1 build-bl2 build-lloader
+tf-deps-secure += build-bl31 build-bl32
+tf-deps-nonsecure += build-bl33
+
 .PHONY: build-fip
 build-fip:: $(tf-deps)
 build-fip $(FIP)::
 	$(call arm-tf-make, fip) CROSS_COMPILE="$(CROSS_COMPILE)"
+
+.PHONY: build-fip-loader
+build-fip-loader:: $(tf-deps-loader)
+build-fip-loader $(FIPloader)::
+	$(call arm-tf-make, fip-loader) CROSS_COMPILE="$(CROSS_COMPILE)"
+
+.PHONY: build-fip-secure
+build-fip-secure:: $(tf-deps-secure)
+build-fip-secure $(FIPsecure)::
+	$(call arm-tf-make, fip-secure) CROSS_COMPILE="$(CROSS_COMPILE)"
+
+.PHONY: build-fip-nonsecure
+build-fip-nonsecure:: $(tf-deps-nonsecure)
+build-fip-nonsecure $(FIPnonsecure)::
+	$(call arm-tf-make, fip-nonsecure) CROSS_COMPILE="$(CROSS_COMPILE)"
 
 clean-bl1-bl2-bl31-fip:
 	$(ECHO) '  CLEAN   edk2/BaseTools'
@@ -318,6 +347,7 @@ endif
 ifneq ($(filter all build-fip,$(MAKECMDGOALS)),)
 singleimage-deps += build-lloader
 endif
+
 ifneq (,$(PLAT_DRAM_SIZE))
 ifeq (${PLAT_DRAM_SIZE},2048)
 DRAM_BASE=0xbfe00000
@@ -328,6 +358,9 @@ DRAM_BASE=0x7fe00000
 endif
 
 SINGLE_PARAM="-b $(DRAM_BASE)"
+endif
+ifneq ($(filter all build-fip,$(MAKECMDGOALS)),)
+singleimage-deps += build-fip
 endif
 
 .PHONY: build-singleimage

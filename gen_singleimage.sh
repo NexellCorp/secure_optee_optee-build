@@ -13,10 +13,18 @@ BASE_ADDR=0x7fe00000
 LOAD_ADDR=0x40000000
 
 LLOADER_FILE=${TOP}/l-loader/l-loader.bin
-FIP_FILE=${TOP}/arm-trusted-firmware/build/s5p6818/release/fip.bin
+FIP_RESULT=${TOP}/arm-trusted-firmware/build/s5p6818/release
+BL1=bl1.bin
+FIP_FILE=${FIP_RESULT}/fip.bin
+LOADER_FILE=${FIP_RESULT}/bl1.bin
 HEADER_FILE=${RESULT}/hdr.bin
 SINGLE_FILE=${RESULT}/singleimage.bin
 DUMMY_FILE=${RESULT}/dummy.bin
+
+FIP_BL2=${FIP_RESULT}/fip-loader.bin
+FIP_MERGE=fip-loader.bin
+FIP_SECURE=${FIP_RESULT}/fip-secure.bin
+FIP_NONSECURE=${FIP_RESULT}/fip-nonsecure.bin
  
 function usage()
 {
@@ -25,15 +33,15 @@ function usage()
 
 function prepare()
 {
-	if [ ! -f $FIP_FILE ]; then
-		echo "no fip file"
-		exit 2
-	fi
+#	if [ ! -f $FIP_FILE ]; then
+#		echo "no fip file"
+#		exit 2
+#	fi
 
-	if [ ! -f $LLOADER_FILE ]; then
-		echo "no l-loader file"
-		exit 3
-	fi
+#	if [ ! -f $LLOADER_FILE ]; then
+#		echo "no l-loader file"
+#		exit 3
+#	fi
 
 	if [ ! -d ${RESULT} ]; then
 		mkdir -p ${RESULT}
@@ -77,6 +85,7 @@ function write_header()
 
 function merge_bins()
 {
+: << END_COMMENT
         if [ ${MERGE_TYPE} == "fixed" ]; then
 		dd if=/dev/zero ibs=1024 count=2050 of=${SINGLE_FILE}
 		dd if=${FIP_FILE} of=${SINGLE_FILE} conv=notrunc
@@ -88,6 +97,32 @@ function merge_bins()
 		cat ${LLOADER_FILE} >> ${SINGLE_FILE}
 		cat ${FIP_FILE}     >> ${SINGLE_FILE}
         fi
+END_COMMENT
+}
+
+function post()
+{
+	mkdir -p ${RESULT}/tmpdir
+	rm -rf ${RESULT}/tmpdir/*
+
+	# fip-XXX.bin
+	\cp -a ${FIP_SECURE} ${RESULT}
+	\cp -a ${FIP_NONSECURE} ${RESULT}
+
+	pushd "${RESULT}/tmpdir"
+
+	# BL1
+	\cp -a ${LOADER_FILE} ${BL1}
+	# BL2
+	\cp -a ${FIP_BL2} .
+	# BL1 + BL2 : fip-loader.bin + offset (2kb) + l-loader (2kb) + bl1.bin
+	dd if=/dev/zero ibs=1024 count=201 of=merged_loader
+	dd if=${FIP_BL2} of=merged_loader conv=notrunc
+	cat ${LLOADER_FILE} >> merged_loader
+	\cp merged_loader ../${FIP_MERGE}
+
+	popd
+	rm -rf ${RESULT}/tmpdir
 }
 
 parse_args $@
@@ -95,8 +130,10 @@ parse_args $@
 
 prepare
 
-write_header
+#write_header
 
-merge_bins
+#merge_bins
+
+post
 
 exit 0
