@@ -13,22 +13,26 @@ BASE_ADDR=0x7fe00000
 LOAD_ADDR=0x40000000
 
 LLOADER_FILE=${TOP}/l-loader/l-loader.bin
-FIP_RESULT=${TOP}/arm-trusted-firmware/build/s5p6818/release
 BL1=bl1.bin
-FIP_FILE=${FIP_RESULT}/fip.bin
-LOADER_FILE=${FIP_RESULT}/bl1.bin
+FIP_RESULT=
+FIP_FILE=
+LOADER_FILE=
 HEADER_FILE=${RESULT}/hdr.bin
 SINGLE_FILE=${RESULT}/singleimage.bin
 DUMMY_FILE=${RESULT}/dummy.bin
 
-FIP_BL2=${FIP_RESULT}/fip-loader.bin
+#is debug mode
+DEBUG=0
+
 FIP_MERGE=fip-loader.bin
-FIP_SECURE=${FIP_RESULT}/fip-secure.bin
-FIP_NONSECURE=${FIP_RESULT}/fip-nonsecure.bin
+FIP_BL2=
+FIP_SECURE=
+FIP_NONSECURE=
  
 function usage()
 {
-	echo "Usage: ./gen_singleimage.sh -l LOADADDR -e LLOADER_BIN -f FIP_BIN -b BASEADDR"
+	echo "Usage: ./gen_singleimage.sh -l LOADADDR \
+		-e LLOADER_BIN -f FIP_BIN -b BASEADDR -m DEBUG"
 }
 
 function prepare()
@@ -50,21 +54,35 @@ function prepare()
 
 function parse_args()
 {
-    TEMP=`getopt -o "b:f:l:hv" -- "$@"`
-    eval set -- "$TEMP"
+	TEMP=`getopt -o "m:b:f:l:hv" -- "$@"`
+	eval set -- "$TEMP"
 
-    while true; do
-        case "$1" in
-            -f ) FIP_FILE=$2; shift 2 ;;
-	    -e ) LLOADER_FILE=$2; shift 2;;
-	    -l ) LOAD_ADDR=$2; shift 2 ;;
-	    -b ) BASE_ADDR=$2; shift 2 ;;
-            -h ) usage; exit 1 ;;
-            -v ) VERBOSE=true; shift 1 ;;
-            -- ) break ;;
-            *  ) echo "invalid option $1"; usage; exit 1 ;;
-        esac
-    done
+	while true; do
+		case "$1" in
+			-f ) FIP_FILE=$2; shift 2 ;;
+			-e ) LLOADER_FILE=$2; shift 2;;
+			-l ) LOAD_ADDR=$2; shift 2 ;;
+			-b ) BASE_ADDR=$2; shift 2 ;;
+			-m ) DEBUG=$2; shift 2 ;;
+			-h ) usage; exit 1 ;;
+			-v ) VERBOSE=true; shift 1 ;;
+			-- ) break ;;
+			*  ) echo "invalid option $1"; usage; exit 1 ;;
+		esac
+	done
+
+	if [ ${DEBUG} == 1 ]; then
+		FIP_RESULT=${TOP}/arm-trusted-firmware/build/s5p6818/debug
+	else
+		FIP_RESULT=${TOP}/arm-trusted-firmware/build/s5p6818/release
+	fi
+
+	FIP_FILE=${FIP_RESULT}/fip.bin
+	LOADER_FILE=${FIP_RESULT}/bl1.bin
+
+	FIP_BL2=${FIP_RESULT}/fip-loader.bin
+	FIP_SECURE=${FIP_RESULT}/fip-secure.bin
+	FIP_NONSECURE=${FIP_RESULT}/fip-nonsecure.bin
 }
 
 function write_header()

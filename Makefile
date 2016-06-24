@@ -357,7 +357,7 @@ else
 DRAM_BASE=0x7fe00000
 endif
 
-SINGLE_PARAM="-b $(DRAM_BASE)"
+SINGLE_PARAM="-b $(DRAM_BASE) -m $(ATF_DEBUG)"
 endif
 ifneq ($(filter all build-fip,$(MAKECMDGOALS)),)
 singleimage-deps += build-fip
