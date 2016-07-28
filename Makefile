@@ -149,7 +149,7 @@ FIPsecure = $(ATF)/fip-secure.bin
 FIPnonsecure = $(ATF)/fip-nonsecure.bin
 
 ARMTF_FLAGS := PLAT=s5p6818 DEBUG=$(ATF_DEBUG)
-ARMTF_FLAGS += LOG_LEVEL=30
+ARMTF_FLAGS += LOG_LEVEL=10
 ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(PWD)/$(BL33) #CFLAGS=""
 ifneq (,$(BL32))
 ARMTF_FLAGS += SPD=opteed
@@ -423,7 +423,7 @@ clean-optee-client:
 
 optee-os-flags := CROSS_COMPILE="$(CROSS_COMPILE32)" PLATFORM=s5p6818
 optee-os-flags += DEBUG=0
-optee-os-flags += CFG_TEE_CORE_LOG_LEVEL=2 # 0=none 1=err 2=info 3=debug 4=flow
+optee-os-flags += CFG_TEE_CORE_LOG_LEVEL=1 # 0=none 1=err 2=info 3=debug 4=flow
 #optee-os-flags += CFG_WITH_PAGER=y
 #optee-os-flags += CFG_TEE_TA_LOG_LEVEL=3
 ifneq (,$(PLAT_UART_BASE))
