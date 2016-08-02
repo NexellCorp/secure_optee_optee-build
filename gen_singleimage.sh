@@ -20,6 +20,7 @@ LOADER_FILE=
 HEADER_FILE=${RESULT}/hdr.bin
 SINGLE_FILE=${RESULT}/singleimage.bin
 DUMMY_FILE=${RESULT}/dummy.bin
+LOADER_SIZE=256			# in KB
 
 #is debug mode
 DEBUG=0
@@ -32,7 +33,8 @@ FIP_NONSECURE=
 function usage()
 {
 	echo "Usage: ./gen_singleimage.sh -l LOADADDR \
-		-e LLOADER_BIN -f FIP_BIN -b BASEADDR -m DEBUG"
+		-e LLOADER_BIN -f FIP_BIN -s FIPLOADER_SIZE -b BASEADDR -m DEBUG"
+	echo "        -s FIP_LOADER_SIZE (in KB)"
 }
 
 function prepare()
@@ -54,7 +56,7 @@ function prepare()
 
 function parse_args()
 {
-	TEMP=`getopt -o "m:b:f:l:hv" -- "$@"`
+	TEMP=`getopt -o "m:b:f:l:s:hv" -- "$@"`
 	eval set -- "$TEMP"
 
 	while true; do
@@ -63,6 +65,7 @@ function parse_args()
 			-e ) LLOADER_FILE=$2; shift 2;;
 			-l ) LOAD_ADDR=$2; shift 2 ;;
 			-b ) BASE_ADDR=$2; shift 2 ;;
+			-s ) LOADER_SIZE=$2; shift 2 ;;
 			-m ) DEBUG=$2; shift 2 ;;
 			-h ) usage; exit 1 ;;
 			-v ) VERBOSE=true; shift 1 ;;
@@ -120,6 +123,9 @@ END_COMMENT
 
 function post()
 {
+	# (LOADER_SIZE - HEADER 1KB) + SPACE 2KB + L-LOADER(l-loader + ATF bl1)
+	local loader_realsize=$((${LOADER_SIZE}-1+2))
+
 	mkdir -p ${RESULT}/tmpdir
 	rm -rf ${RESULT}/tmpdir/*
 
@@ -133,8 +139,7 @@ function post()
 	\cp -a ${LOADER_FILE} ${BL1}
 	# BL2
 	\cp -a ${FIP_BL2} .
-	# BL1 + BL2 : fip-loader.bin + offset (2kb) + l-loader (2kb) + bl1.bin
-	dd if=/dev/zero ibs=1024 count=201 of=merged_loader
+	dd if=/dev/zero ibs=1024 count=${loader_realsize} of=merged_loader
 	dd if=${FIP_BL2} of=merged_loader conv=notrunc
 	cat ${LLOADER_FILE} >> merged_loader
 	\cp merged_loader ../${FIP_MERGE}

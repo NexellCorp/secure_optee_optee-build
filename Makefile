@@ -149,7 +149,7 @@ FIPsecure = $(ATF)/fip-secure.bin
 FIPnonsecure = $(ATF)/fip-nonsecure.bin
 
 ARMTF_FLAGS := PLAT=s5p6818 DEBUG=$(ATF_DEBUG)
-ARMTF_FLAGS += LOG_LEVEL=10
+ARMTF_FLAGS += LOG_LEVEL=30
 ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(PWD)/$(BL33) #CFLAGS=""
 ifneq (,$(BL32))
 ARMTF_FLAGS += SPD=opteed
@@ -348,6 +348,7 @@ ifneq ($(filter all build-fip,$(MAKECMDGOALS)),)
 singleimage-deps += build-lloader
 endif
 
+DRAM_BASE=0x7fe00000
 ifneq (,$(PLAT_DRAM_SIZE))
 ifeq (${PLAT_DRAM_SIZE},2048)
 DRAM_BASE=0xbfe00000
@@ -356,9 +357,14 @@ DRAM_BASE=0x5fe00000
 else
 DRAM_BASE=0x7fe00000
 endif
-
-SINGLE_PARAM="-b $(DRAM_BASE) -m $(ATF_DEBUG)"
 endif
+
+LOADER_SIZE=256
+ifneq (,$(PLAT_LOADER_SIZE))
+LOADER_SIZE=$(PLAT_LOADER_SIZE)
+endif
+
+SINGLE_PARAM="-b $(DRAM_BASE) -m $(ATF_DEBUG) -s $(LOADER_SIZE)"
 ifneq ($(filter all build-fip,$(MAKECMDGOALS)),)
 singleimage-deps += build-fip
 endif
