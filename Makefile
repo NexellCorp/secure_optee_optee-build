@@ -24,9 +24,13 @@ _all:
 	$(Q)$(MAKE) -f optee_build/Makefile all $(filter-out _all,$(MAKECMDGOALS))
 	$(Q)if [ ! -L u-boot ] ; then ln -s ../u-boot u-boot ; fi
 
+ifneq (,$(USE_SECOS))
 all: build-lloader build-fip build-linux build-optee-rfs build-singleimage \
 	build-fip-loader build-fip-secure build-fip-nonsecure
-
+else
+all: build-lloader build-fip build-linux build-singleimage \
+	build-fip-loader build-fip-secure build-fip-nonsecure
+endif
 pre_clean:
 	$(Q)if [ ! -L linux ] ; then ln -s ../kernel linux ; fi
 	$(Q)if [ ! -L u-boot ] ; then ln -s ../u-boot u-boot ; fi
@@ -142,7 +146,12 @@ BL2 = $(ATF)/bl2.bin
 #BL30 = mcuimage.bin
 BL31 = $(ATF)/bl31.bin
 # Comment out to not include OP-TEE OS image in fip.bin
+ifeq ($(USE_SECOS),1)
+$(ECHO) '  Set BL32 : secos.bin'
+BL32 = secos/out/kernel-install/secos.bin
+else
 BL32 = optee_os/out/arm-plat-s5p6818/core/tee.bin
+endif
 FIP = $(ATF)/fip.bin
 FIPloader = $(ATF)/fip-loader.bin
 FIPsecure = $(ATF)/fip-secure.bin
@@ -152,7 +161,12 @@ ARMTF_FLAGS := PLAT=s5p6818 DEBUG=$(ATF_DEBUG)
 ARMTF_FLAGS += LOG_LEVEL=30
 ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(PWD)/$(BL33) #CFLAGS=""
 ifneq (,$(BL32))
+ifeq ($(USE_SECOS),1)
+$(ECHO) '  Set spd : secureosd'
+ARMTF_FLAGS += SPD=secureosd
+else
 ARMTF_FLAGS += SPD=opteed
+endif
 ARMTF_EXPORTS += BL32=$(PWD)/$(BL32)
 endif
 ifneq (,$(PLAT_UART_BASE))
@@ -190,15 +204,20 @@ endif
 ifneq ($(filter all build-bl31,$(MAKECMDGOALS)),)
 tf-deps += build-bl31
 endif
+ifneq (,$(USE_SECOS))
 ifneq ($(filter all build-bl32,$(MAKECMDGOALS)),)
 tf-deps += build-bl32
+endif
 endif
 ifneq ($(filter all build-bl33,$(MAKECMDGOALS)),)
 tf-deps += build-bl33
 endif
 
 tf-deps-loader += build-bl1 build-bl2 build-lloader
-tf-deps-secure += build-bl31 build-bl32
+tf-deps-secure += build-bl31
+ifneq (,$(USE_SECOS))
+tf-deps-secure += build-bl32
+endif
 tf-deps-nonsecure += build-bl33
 
 .PHONY: build-fip
@@ -214,8 +233,11 @@ build-fip-loader $(FIPloader)::
 .PHONY: build-fip-secure
 build-fip-secure:: $(tf-deps-secure)
 build-fip-secure $(FIPsecure)::
+ifeq ($(USE_SECOS),1)
+	$(call arm-tf-make, fip-secure) USE_SECOS=1 CROSS_COMPILE="$(CROSS_COMPILE)"
+else
 	$(call arm-tf-make, fip-secure) CROSS_COMPILE="$(CROSS_COMPILE)"
-
+endif
 .PHONY: build-fip-nonsecure
 build-fip-nonsecure:: $(tf-deps-nonsecure)
 build-fip-nonsecure $(FIPnonsecure)::
@@ -307,6 +329,7 @@ clean-linux-dtb:
 
 INITRAMFS = optee-rfs.gz
 
+ifneq (,$(USE_SECOS))
 ifneq ($(filter all build-optee-linuxdriver,$(MAKECMDGOALS)),)
 optee-rfs-deps += build-optee-linuxdriver
 endif
@@ -321,6 +344,7 @@ endif
 #endif
 ifneq ($(filter all build-optee-test,$(MAKECMDGOALS)),)
 optee-rfs-deps += build-optee-test
+endif
 endif
 
 .PHONY: build-optee-rfs
@@ -480,11 +504,13 @@ optee-test-flags := CROSS_COMPILE_HOST="$(CROSS_COMPILE)" \
 		    TA_DEV_KIT_DIR=$(PWD)/optee_os/out/arm-plat-s5p6818/export-user_ta \
 		    O=$(PWD)/optee_test/out #CFG_TEE_TA_LOG_LEVEL=3
 
+ifneq (,$(USE_SECOS))
 ifneq ($(filter all build-bl32,$(MAKECMDGOALS)),)
 optee-test-deps += build-bl32
 endif
 ifneq ($(filter all build-optee-client,$(MAKECMDGOALS)),)
 optee-test-deps += build-optee-client
+endif
 endif
 
 .PHONY: build-optee-test
@@ -508,11 +534,13 @@ aes-perf-flags := CROSS_COMPILE_HOST="$(CROSS_COMPILE)" \
 		  CROSS_COMPILE_TA="$(CROSS_COMPILE32)" \
 		  TA_DEV_KIT_DIR=$(PWD)/optee_os/out/arm-plat-s5p6818/export-user_ta \
 
+ifneq (,$(USE_SECOS))
 ifneq ($(filter all build-bl32,$(MAKECMDGOALS)),)
 aes-perf-deps += build-bl32
 endif
 ifneq ($(filter all build-optee-client,$(MAKECMDGOALS)),)
 aes-perf-deps += build-optee-client
+endif
 endif
 
 .PHONY: build-aes-perf
@@ -533,11 +561,13 @@ helloworld-flags := CROSS_COMPILE_HOST="$(CROSS_COMPILE)" \
 		    CROSS_COMPILE_TA="$(CROSS_COMPILE32)" \
 		    TA_DEV_KIT_DIR=$(PWD)/optee_os/out/arm-plat-s5p6818/export-user_ta \
 
+ifneq (,$(USE_SECOS))
 ifneq ($(filter all build-bl32,$(MAKECMDGOALS)),)
 helloworld-deps += build-bl32
 endif
 ifneq ($(filter all build-optee-client,$(MAKECMDGOALS)),)
 helloworld-deps += build-optee-client
+endif
 endif
 
 .PHONY: build-helloworld
