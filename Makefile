@@ -162,7 +162,7 @@ FIPsecure = $(ATF)/fip-secure.bin
 FIPnonsecure = $(ATF)/fip-nonsecure.bin
 
 ARMTF_FLAGS := PLAT=s5p6818 DEBUG=$(ATF_DEBUG)
-ARMTF_FLAGS += LOG_LEVEL=30
+ARMTF_FLAGS += LOG_LEVEL=10
 ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(PWD)/$(BL33) #CFLAGS=""
 ifneq (,$(BL32))
 ifneq (,$(USE_SECOS))
