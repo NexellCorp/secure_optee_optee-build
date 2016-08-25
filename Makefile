@@ -25,10 +25,10 @@ _all:
 	$(Q)if [ ! -L u-boot ] ; then ln -s ../u-boot u-boot ; fi
 
 ifneq (,$(USE_SECOS))
-all: build-lloader build-fip build-linux build-optee-rfs build-singleimage \
+all: build-lloader build-fip build-linux build-singleimage \
 	build-fip-loader build-fip-secure build-fip-nonsecure
 else
-all: build-lloader build-fip build-linux build-singleimage \
+all: build-lloader build-fip build-linux build-optee-rfs build-singleimage \
 	build-fip-loader build-fip-secure build-fip-nonsecure
 endif
 pre_clean:
@@ -42,11 +42,15 @@ post_clean:
 
 #clean: clean-bl1-bl2-bl31-fip clean-bl32 clean-bl33 clean-lloader
 
+ifneq (,$(USE_SECOS))
+clean: clean-bl1-bl2-bl31-fip clean-lloader
+else
 clean: clean-bl1-bl2-bl31-fip clean-bl32 clean-lloader
 
 #clean: clean-linux-dtb clean-optee-rfs clean-optee-linuxdriver
 clean: clean-optee-rfs
 clean: clean-optee-client clean-bl32 clean-aes-perf clean-helloworld
+endif
 clean: clean-singleimage
 
 cleaner: pre_clean clean post_clean
@@ -146,7 +150,7 @@ BL2 = $(ATF)/bl2.bin
 #BL30 = mcuimage.bin
 BL31 = $(ATF)/bl31.bin
 # Comment out to not include OP-TEE OS image in fip.bin
-ifeq ($(USE_SECOS),1)
+ifneq (,$(USE_SECOS))
 $(ECHO) '  Set BL32 : secos.bin'
 BL32 = secos/out/kernel-install/secos.bin
 else
@@ -158,10 +162,10 @@ FIPsecure = $(ATF)/fip-secure.bin
 FIPnonsecure = $(ATF)/fip-nonsecure.bin
 
 ARMTF_FLAGS := PLAT=s5p6818 DEBUG=$(ATF_DEBUG)
-ARMTF_FLAGS += LOG_LEVEL=30
+ARMTF_FLAGS += LOG_LEVEL=10
 ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(PWD)/$(BL33) #CFLAGS=""
 ifneq (,$(BL32))
-ifeq ($(USE_SECOS),1)
+ifneq (,$(USE_SECOS))
 $(ECHO) '  Set spd : secureosd'
 ARMTF_FLAGS += SPD=secureosd
 else
@@ -205,6 +209,8 @@ ifneq ($(filter all build-bl31,$(MAKECMDGOALS)),)
 tf-deps += build-bl31
 endif
 ifneq (,$(USE_SECOS))
+# Nothing to do
+else
 ifneq ($(filter all build-bl32,$(MAKECMDGOALS)),)
 tf-deps += build-bl32
 endif
@@ -216,6 +222,8 @@ endif
 tf-deps-loader += build-bl1 build-bl2 build-lloader
 tf-deps-secure += build-bl31
 ifneq (,$(USE_SECOS))
+# Nothing to do
+else
 tf-deps-secure += build-bl32
 endif
 tf-deps-nonsecure += build-bl33
@@ -233,7 +241,7 @@ build-fip-loader $(FIPloader)::
 .PHONY: build-fip-secure
 build-fip-secure:: $(tf-deps-secure)
 build-fip-secure $(FIPsecure)::
-ifeq ($(USE_SECOS),1)
+ifneq (,$(USE_SECOS))
 	$(call arm-tf-make, fip-secure) USE_SECOS=1 CROSS_COMPILE="$(CROSS_COMPILE)"
 else
 	$(call arm-tf-make, fip-secure) CROSS_COMPILE="$(CROSS_COMPILE)"
@@ -330,6 +338,8 @@ clean-linux-dtb:
 INITRAMFS = optee-rfs.gz
 
 ifneq (,$(USE_SECOS))
+# Nothing to do
+else
 ifneq ($(filter all build-optee-linuxdriver,$(MAKECMDGOALS)),)
 optee-rfs-deps += build-optee-linuxdriver
 endif
@@ -496,6 +506,7 @@ clean-bl32:
 # OP-TEE tests (xtest)
 #
 
+
 all: build-optee-test
 clean: clean-optee-test
 
@@ -505,6 +516,8 @@ optee-test-flags := CROSS_COMPILE_HOST="$(CROSS_COMPILE)" \
 		    O=$(PWD)/optee_test/out #CFG_TEE_TA_LOG_LEVEL=3
 
 ifneq (,$(USE_SECOS))
+# Nothing to do
+else
 ifneq ($(filter all build-bl32,$(MAKECMDGOALS)),)
 optee-test-deps += build-bl32
 endif
@@ -535,6 +548,8 @@ aes-perf-flags := CROSS_COMPILE_HOST="$(CROSS_COMPILE)" \
 		  TA_DEV_KIT_DIR=$(PWD)/optee_os/out/arm-plat-s5p6818/export-user_ta \
 
 ifneq (,$(USE_SECOS))
+# Nothing to do
+else
 ifneq ($(filter all build-bl32,$(MAKECMDGOALS)),)
 aes-perf-deps += build-bl32
 endif
@@ -562,6 +577,8 @@ helloworld-flags := CROSS_COMPILE_HOST="$(CROSS_COMPILE)" \
 		    TA_DEV_KIT_DIR=$(PWD)/optee_os/out/arm-plat-s5p6818/export-user_ta \
 
 ifneq (,$(USE_SECOS))
+# Nothing to do
+else
 ifneq ($(filter all build-bl32,$(MAKECMDGOALS)),)
 helloworld-deps += build-bl32
 endif
@@ -579,4 +596,3 @@ build-helloworld:: $(aarch64-linux-gnu-gcc)
 clean-helloworld:
 	$(ECHO) '  CLEAN   $@'
 	$(Q)rm -rf helloworld/out
-
