@@ -1,4 +1,4 @@
-# Makefile for HiKey UEFI boot firmware
+# Makefile for nexell boot firmware
 #
 # 'make help' for details
 
@@ -215,9 +215,7 @@ ifneq ($(filter all build-bl32,$(MAKECMDGOALS)),)
 tf-deps += build-bl32
 endif
 endif
-ifneq ($(filter all build-bl33,$(MAKECMDGOALS)),)
 tf-deps += build-bl33
-endif
 
 tf-deps-loader += build-bl1 build-bl2 build-lloader
 tf-deps-secure += build-bl31
@@ -232,6 +230,17 @@ tf-deps-nonsecure += build-bl33
 build-fip:: $(tf-deps)
 build-fip $(FIP)::
 	$(call arm-tf-make, fip) CROSS_COMPILE="$(CROSS_COMPILE)"
+
+.PHONY: build-fip-split
+build-fip-split:: $(tf-deps-loader) $(tf-deps-secure) $(tf-deps-nonsecure)
+build-fip-split::
+	$(call arm-tf-make, fip-loader) CROSS_COMPILE="$(CROSS_COMPILE)"
+ifneq (,$(USE_SECOS))
+	$(call arm-tf-make, fip-secure) USE_SECOS=1 CROSS_COMPILE="$(CROSS_COMPILE)"
+else
+	$(call arm-tf-make, fip-secure) CROSS_COMPILE="$(CROSS_COMPILE)"
+endif
+	$(call arm-tf-make, fip-nonsecure) CROSS_COMPILE="$(CROSS_COMPILE)"
 
 .PHONY: build-fip-loader
 build-fip-loader:: $(tf-deps-loader)
@@ -261,19 +270,14 @@ clean-bl1-bl2-bl31-fip:
 #
 
 LLOADER = l-loader/l-loader.bin
-PTABLE = l-loader/ptable.img
 
-ifneq ($(filter all build-bl1,$(MAKECMDGOALS)),)
 lloader-deps += build-bl1
-endif
 
 # FIXME: adding $(BL1) as a dependency [after $(LLOADER)::] breaks
 # parallel build (-j) because the same rule is run twice simultaneously
 # $ make -j9 build-bl1 build-lloader
 #   BUILD   build-bl1 # $@ = build-bl1
 #   BUILD   build-bl1 # $@ = arm-trusted-firmware/build/.../bl1.bin
-# make[1]: Entering directory '/home/jerome/work/hikey_uefi/arm-trusted-firmware'
-# make[1]: Entering directory '/home/jerome/work/hikey_uefi/arm-trusted-firmware'
 #   DEPS    build/s5p6818/debug/bl31/bl31.ld.d
 #   DEPS    build/s5p6818/debug/bl31/bl31.ld.d
 .PHONY: build-lloader
@@ -375,13 +379,6 @@ clean-optee-rfs:
 
 SINGLE_IMG = singleimage.bin
 
-ifneq ($(filter all build-fip,$(MAKECMDGOALS)),)
-singleimage-deps += build-fip
-endif
-ifneq ($(filter all build-fip,$(MAKECMDGOALS)),)
-singleimage-deps += build-lloader
-endif
-
 DRAM_BASE=0x7fe00000
 ifneq (,$(PLAT_DRAM_SIZE))
 ifeq (${PLAT_DRAM_SIZE},2048)
@@ -399,9 +396,7 @@ LOADER_SIZE=$(PLAT_LOADER_SIZE)
 endif
 
 SINGLE_PARAM="-b $(DRAM_BASE) -m $(ATF_DEBUG) -s $(LOADER_SIZE)"
-ifneq ($(filter all build-fip,$(MAKECMDGOALS)),)
-singleimage-deps += build-fip
-endif
+singleimage-deps += build-fip-split
 
 .PHONY: build-singleimage
 build-singleimage:: $(singleimage-deps)

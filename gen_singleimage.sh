@@ -26,7 +26,7 @@ LOADER_SIZE=256			# in KB
 DEBUG=0
 
 FIP_MERGE=fip-loader.bin
-FIP_BL2=
+FIP_LOADER=
 FIP_SECURE=
 FIP_NONSECURE=
  
@@ -83,7 +83,7 @@ function parse_args()
 	FIP_FILE=${FIP_RESULT}/fip.bin
 	LOADER_FILE=${FIP_RESULT}/bl1.bin
 
-	FIP_BL2=${FIP_RESULT}/fip-loader.bin
+	FIP_LOADER=${FIP_RESULT}/fip-loader.bin
 	FIP_SECURE=${FIP_RESULT}/fip-secure.bin
 	FIP_NONSECURE=${FIP_RESULT}/fip-nonsecure.bin
 }
@@ -136,11 +136,11 @@ function post()
 	pushd "${RESULT}/tmpdir"
 
 	# BL1
-	\cp -a ${LOADER_FILE} ${BL1}
+	#\cp -a ${LOADER_FILE} ${BL1}
 	# BL2
-	\cp -a ${FIP_BL2} .
+	\cp -a ${FIP_LOADER} .
 	dd if=/dev/zero ibs=1024 count=${loader_realsize} of=merged_loader
-	dd if=${FIP_BL2} of=merged_loader conv=notrunc
+	dd if=${FIP_LOADER} of=merged_loader conv=notrunc
 	cat ${LLOADER_FILE} >> merged_loader
 	\cp merged_loader ../${FIP_MERGE}
 
