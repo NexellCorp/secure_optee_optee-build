@@ -119,7 +119,8 @@ CROSS_COMPILE32 ?= $(CCACHE)arm-linux-gnueabihf-
 # U-BOOT
 #
 
-BL33 = u-boot-artik7/u-boot.bin
+UBOOT_DIR ?= u-boot-artik7
+BL33 = $(UBOOT_DIR)/u-boot.bin
 
 
 .PHONY: build-bl33
@@ -163,7 +164,7 @@ FIPnonsecure = $(ATF)/fip-nonsecure.bin
 
 ARMTF_FLAGS := PLAT=s5p6818 DEBUG=$(ATF_DEBUG)
 ARMTF_FLAGS += LOG_LEVEL=10
-ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(PWD)/$(BL33) #CFLAGS=""
+ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(BL33) #CFLAGS=""
 ifneq (,$(BL32))
 ifneq (,$(USE_SECOS))
 $(ECHO) '  Set spd : secureosd'
@@ -226,7 +227,7 @@ ifneq (,$(USE_SECOS))
 else
 tf-deps-secure += build-bl32
 endif
-tf-deps-nonsecure += build-bl33
+# tf-deps-nonsecure += build-bl33
 
 .PHONY: build-fip
 build-fip:: $(tf-deps)
