@@ -119,21 +119,21 @@ CROSS_COMPILE32 ?= $(CCACHE)arm-linux-gnueabihf-
 # U-BOOT
 #
 
-BL33 = u-boot-artik7/u-boot.bin
+BL33 = u-boot-artik/u-boot.bin
 
 
 .PHONY: build-bl33
 build-bl33:: $(aarch64-linux-gnu-gcc)
 build-bl33 $(BL33)::
 	$(ECHO) '  BUILD   $@'
-	$(Q)set -e ; cd u-boot-artik7 ; \
+	$(Q)set -e ; cd u-boot-artik ; \
 	    $(MAKE) artik710_raptor_config ; \
 	    $(MAKE) CROSS_COMPILE="$(CROSS_COMPILE)"
 	$(Q)touch ${BL33}
 
 clean-bl33:
 	$(ECHO) '  CLEAN   $@'
-	$(Q) $(MAKE) -C u-boot-artik7 clean
+	$(Q) $(MAKE) -C u-boot-artik clean
 
 #
 # ARM Trusted Firmware
