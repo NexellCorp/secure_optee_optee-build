@@ -186,6 +186,9 @@ endif
 ifneq (,$(SUPPORT_ANDROID))
 ARMTF_FLAGS += SUPPORT_ANDROID="$(SUPPORT_ANDROID)"
 endif
+ifeq ($(QUICKBOOT), 1)
+ARMTF_FLAGS += QUICKBOOT=1
+endif
 
 define arm-tf-make
         $(ECHO) '  BUILD   build-$(strip $(1)) [$@]'
