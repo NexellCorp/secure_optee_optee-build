@@ -187,6 +187,9 @@ endif
 ifneq (,$(BL31_ON_SRAM))
 ARMTF_FLAGS += BL31_ON_SRAM="$(BL31_ON_SRAM)"
 endif
+ifneq (,$(SUPPORT_ANDROID))
+ARMTF_FLAGS += SUPPORT_ANDROID="$(SUPPORT_ANDROID)"
+endif
 
 define arm-tf-make
         $(ECHO) '  BUILD   build-$(strip $(1)) [$@]'
