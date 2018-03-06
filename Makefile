@@ -119,21 +119,26 @@ CROSS_COMPILE32 ?= $(CCACHE)arm-linux-gnueabihf-
 # U-BOOT
 #
 
-BL33 = u-boot-artik/u-boot.bin
+ifneq (,$(SUPPORT_ANDROID))
+UBOOT_DIR = device/nexell/u-boot/u-boot-2016.01
+else
+UBOOT_DIR = u-boot-artik7
+endif
 
+BL33 = $(UBOOT_DIR)/u-boot.bin
 
 .PHONY: build-bl33
 build-bl33:: $(aarch64-linux-gnu-gcc)
 build-bl33 $(BL33)::
 	$(ECHO) '  BUILD   $@'
-	$(Q)set -e ; cd u-boot-artik ; \
+	$(Q)set -e ; cd $(UBOOT_DIR) ; \
 	    $(MAKE) artik710_raptor_config ; \
 	    $(MAKE) CROSS_COMPILE="$(CROSS_COMPILE)"
 	$(Q)touch ${BL33}
 
 clean-bl33:
 	$(ECHO) '  CLEAN   $@'
-	$(Q) $(MAKE) -C u-boot-artik clean
+	$(Q) $(MAKE) -C $(UBOOT_DIR) clean
 
 #
 # ARM Trusted Firmware
@@ -163,7 +168,7 @@ FIPnonsecure = $(ATF)/fip-nonsecure.bin
 
 ARMTF_FLAGS := PLAT=s5p6818 DEBUG=$(ATF_DEBUG)
 ARMTF_FLAGS += LOG_LEVEL=10
-ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(PWD)/$(BL33) #CFLAGS=""
+ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(BL33) #CFLAGS=""
 ifneq (,$(BL32))
 ifneq (,$(USE_SECOS))
 $(ECHO) '  Set spd : secureosd'
