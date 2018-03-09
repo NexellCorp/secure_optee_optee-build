@@ -8,6 +8,7 @@ BL33_UEFI = 0
 PLAT_UART_BASE ?= 0xC00A3000
 PLAT_DRAM_SIZE ?= 1024
 BL31_ON_SRAM = 1
+BOARD_NAME ?= artik710_raptor
 
 ifeq ($(V),1)
   Q :=
@@ -132,7 +133,7 @@ build-bl33:: $(aarch64-linux-gnu-gcc)
 build-bl33 $(BL33)::
 	$(ECHO) '  BUILD   $@'
 	$(Q)set -e ; cd $(UBOOT_DIR) ; \
-	    $(MAKE) artik710_raptor_config ; \
+	    $(MAKE) $(BOARD_NAME)_config ; \
 	    $(MAKE) CROSS_COMPILE="$(CROSS_COMPILE)"
 	$(Q)touch ${BL33}
 
