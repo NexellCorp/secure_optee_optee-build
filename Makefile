@@ -157,6 +157,7 @@ BL32 = secos/out/kernel-install/secos.bin
 else
 BL32 = optee_os/out/arm-plat-s5p6818/core/tee.bin
 endif
+BL33 = ../u-boot/u-boot-2016.01/u-boot.bin
 FIP = $(ATF)/fip.bin
 FIPloader = $(ATF)/fip-loader.bin
 FIPsecure = $(ATF)/fip-secure.bin
@@ -164,7 +165,7 @@ FIPnonsecure = $(ATF)/fip-nonsecure.bin
 
 ARMTF_FLAGS := PLAT=s5p6818 DEBUG=$(ATF_DEBUG)
 ARMTF_FLAGS += LOG_LEVEL=10
-ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(BL33) #CFLAGS=""
+ARMTF_EXPORTS := NEED_BL30=no BL30=$(PWD)/$(BL30) BL33=$(realpath $(BL33)) #CFLAGS=""
 ifneq (,$(BL32))
 ifneq (,$(USE_SECOS))
 $(ECHO) '  Set spd : secureosd'
@@ -172,7 +173,7 @@ ARMTF_FLAGS += SPD=secureosd
 else
 ARMTF_FLAGS += SPD=opteed
 endif
-ARMTF_EXPORTS += BL32=$(PWD)/$(BL32)
+ARMTF_EXPORTS += BL32=$(realpath $(BL32))
 endif
 ifneq (,$(PLAT_UART_BASE))
 ARMTF_FLAGS += PLAT_UART_BASE="$(PLAT_UART_BASE)"
@@ -287,7 +288,7 @@ endif
 build-lloader:: $(lloader-deps) $(arm-linux-gnueabihf-gcc)
 build-lloader $(LLOADER)::
 	$(ECHO) '  BUILD   build-lloader'
-	$(Q)$(MAKE) -C l-loader BL1=$(PWD)/$(BL1) PLAT_DRAM_SIZE=$(PLAT_DRAM_SIZE) \
+	$(Q)$(MAKE) -C l-loader BL1=$(realpath $(BL1)) PLAT_DRAM_SIZE=$(PLAT_DRAM_SIZE) \
 		CROSS_COMPILE="$(CROSS_COMPILE32)" l-loader.bin
 
 clean-lloader:
